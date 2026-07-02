@@ -1,0 +1,33 @@
+{
+  "_meta": {
+    "description": "Byte-exact golden vectors captured from the authoritative TypeScript chain layer for the C port to pin against.",
+    "capturedAt": "2026-06-25T19:57:23.309Z",
+    "capture_command": "cd chain && npx ts-node --compiler-options '{\"module\":\"commonjs\",\"esModuleInterop\":true}' .golden_capture/capture.ts > ../chain_c/tests/golden/golden.json",
+    "fixed_priv_key_bn_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+    "rabin_security_level": 6,
+    "rabin_seed_hex": "42424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242"
+  },
+  "txSighashAddress": {
+    "ts_call": "bsv.PrivateKey.fromWIF -> publicKey/toAddress; bsv.Transaction build/sign; Sighash.sighashPreimage",
+    "fixed_priv_bn_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+    "wif_mainnet": "KwFfNUhSDaASSAwtG7ssQM1uVX8RgX5GHWnnLfhfiQDigjioWXHH",
+    "wif_testnet": "cMceqPhHedrhbcR9eXgzmfWy7kRqLyAxMYwFT6ABDWsiwUp9Nsq9",
+    "compressed_pubkey_hex": "031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+    "p2pkh_address_mainnet": "1C6Rc3w25VHud3dLDamutaqfKWqhrLRTaD",
+    "p2pkh_address_testnet": "mrcNu71ztWjAQA6ww9kHiW3zBWSQidHXTQ",
+    "tx_input": {
+      "prevTxId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "prevVout": 0,
+      "prevSats": 100000,
+      "prevScript_hex": "76a91479b000887626b294a914501a4cd226b58b23598388ac",
+      "outAddress": "1C6Rc3w25VHud3dLDamutaqfKWqhrLRTaD",
+      "outSats": 90000,
+      "feeSats": 10000
+    },
+    "tx_raw_hex": "0100000001aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa000000006a4730440220098cd15c220857f772723cd62aa2c88b5bc3bc4557350f3871aa353a7a9851a702203d18e1d5a0575df550c49939ffa00fc0294606af5e7643c05b0b3ed88bdbd9d84121031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078fffffffff01905f0100000000001976a91479b000887626b294a914501a4cd226b58b23598388ac00000000",
+    "txid": "c6be6a69e29adaed14219bb1b451080907440b641169bc17801a4f9c9ae243de",
+    "sighash_type": 65,
+    "sighash_flags": 851968,
+    "bip143_forkid_sighash_preimage_hex": "010000006324e33631b1cb491f73dac8baa476a642eaeccfc7e00c2708764468c82a4e6c3bb13029ce7b1f559ef5e747fcac439f1455a2ec7c5f09b72290795e70665044aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa000000001976a91479b000887626b294a914501a4cd226b58b23598388aca086010000000000ffffffffd1b8ac6dc224ba0d4d29079d4bd17ae75caba89a304586755ab02629852d742c0000000041000000"
+  }
+}

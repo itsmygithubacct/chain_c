@@ -1,0 +1,6 @@
+
+library ArpAttest {
+  static function attestationMsg(int seq, Sha256 activateDigest) : bytes {
+    return (b'415250315f4154544553545f5631' + num2bin(seq, 8) + activateDigest);
+  }
+}

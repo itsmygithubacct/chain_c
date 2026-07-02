@@ -1,0 +1,364 @@
+{
+  "_meta": {
+    "description": "Byte-exact golden vectors captured from the authoritative TypeScript chain layer for the C port to pin against.",
+    "capturedAt": "2026-06-25T19:57:23.309Z",
+    "capture_command": "cd chain && npx ts-node --compiler-options '{\"module\":\"commonjs\",\"esModuleInterop\":true}' .golden_capture/capture.ts > ../chain_c/tests/golden/golden.json",
+    "fixed_priv_key_bn_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+    "rabin_security_level": 6,
+    "rabin_seed_hex": "42424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242"
+  },
+  "intEncoders": {
+    "ts_call": "num2bin (scryptlib, sized) and int2ByteString (scrypt-ts, one-arg minimal + sized)",
+    "num2bin_vectors": [
+      {
+        "input": "0",
+        "width": 1,
+        "num2bin_hex": "00"
+      },
+      {
+        "input": "0",
+        "width": 2,
+        "num2bin_hex": "0000"
+      },
+      {
+        "input": "0",
+        "width": 4,
+        "num2bin_hex": "00000000"
+      },
+      {
+        "input": "0",
+        "width": 8,
+        "num2bin_hex": "0000000000000000"
+      },
+      {
+        "input": "1",
+        "width": 1,
+        "num2bin_hex": "01"
+      },
+      {
+        "input": "1",
+        "width": 2,
+        "num2bin_hex": "0100"
+      },
+      {
+        "input": "1",
+        "width": 4,
+        "num2bin_hex": "01000000"
+      },
+      {
+        "input": "1",
+        "width": 8,
+        "num2bin_hex": "0100000000000000"
+      },
+      {
+        "input": "16",
+        "width": 1,
+        "num2bin_hex": "10"
+      },
+      {
+        "input": "16",
+        "width": 2,
+        "num2bin_hex": "1000"
+      },
+      {
+        "input": "16",
+        "width": 4,
+        "num2bin_hex": "10000000"
+      },
+      {
+        "input": "16",
+        "width": 8,
+        "num2bin_hex": "1000000000000000"
+      },
+      {
+        "input": "-1",
+        "width": 1,
+        "num2bin_hex": "81"
+      },
+      {
+        "input": "-1",
+        "width": 2,
+        "num2bin_hex": "0180"
+      },
+      {
+        "input": "-1",
+        "width": 4,
+        "num2bin_hex": "01000080"
+      },
+      {
+        "input": "-1",
+        "width": 8,
+        "num2bin_hex": "0100000000000080"
+      },
+      {
+        "input": "127",
+        "width": 1,
+        "num2bin_hex": "7f"
+      },
+      {
+        "input": "127",
+        "width": 2,
+        "num2bin_hex": "7f00"
+      },
+      {
+        "input": "127",
+        "width": 4,
+        "num2bin_hex": "7f000000"
+      },
+      {
+        "input": "127",
+        "width": 8,
+        "num2bin_hex": "7f00000000000000"
+      },
+      {
+        "input": "128",
+        "width": 1,
+        "error": "128 cannot fit in 1 byte[s]"
+      },
+      {
+        "input": "128",
+        "width": 2,
+        "num2bin_hex": "8000"
+      },
+      {
+        "input": "128",
+        "width": 4,
+        "num2bin_hex": "80000000"
+      },
+      {
+        "input": "128",
+        "width": 8,
+        "num2bin_hex": "8000000000000000"
+      },
+      {
+        "input": "255",
+        "width": 1,
+        "error": "255 cannot fit in 1 byte[s]"
+      },
+      {
+        "input": "255",
+        "width": 2,
+        "num2bin_hex": "ff00"
+      },
+      {
+        "input": "255",
+        "width": 4,
+        "num2bin_hex": "ff000000"
+      },
+      {
+        "input": "255",
+        "width": 8,
+        "num2bin_hex": "ff00000000000000"
+      },
+      {
+        "input": "256",
+        "width": 1,
+        "error": "256 cannot fit in 1 byte[s]"
+      },
+      {
+        "input": "256",
+        "width": 2,
+        "num2bin_hex": "0001"
+      },
+      {
+        "input": "256",
+        "width": 4,
+        "num2bin_hex": "00010000"
+      },
+      {
+        "input": "256",
+        "width": 8,
+        "num2bin_hex": "0001000000000000"
+      },
+      {
+        "input": "-128",
+        "width": 1,
+        "error": "-128 cannot fit in 1 byte[s]"
+      },
+      {
+        "input": "-128",
+        "width": 2,
+        "num2bin_hex": "8080"
+      },
+      {
+        "input": "-128",
+        "width": 4,
+        "num2bin_hex": "80000080"
+      },
+      {
+        "input": "-128",
+        "width": 8,
+        "num2bin_hex": "8000000000000080"
+      },
+      {
+        "input": "12345678901234567890",
+        "width": 1,
+        "error": "12345678901234567890 cannot fit in 1 byte[s]"
+      },
+      {
+        "input": "12345678901234567890",
+        "width": 2,
+        "error": "12345678901234567890 cannot fit in 2 byte[s]"
+      },
+      {
+        "input": "12345678901234567890",
+        "width": 4,
+        "error": "12345678901234567890 cannot fit in 4 byte[s]"
+      },
+      {
+        "input": "12345678901234567890",
+        "width": 8,
+        "error": "12345678901234567890 cannot fit in 8 byte[s]"
+      }
+    ],
+    "int2ByteString_minimal": [
+      {
+        "input": "0",
+        "int2ByteString_hex": ""
+      },
+      {
+        "input": "1",
+        "int2ByteString_hex": "01"
+      },
+      {
+        "input": "16",
+        "int2ByteString_hex": "10"
+      },
+      {
+        "input": "-1",
+        "int2ByteString_hex": "81"
+      },
+      {
+        "input": "127",
+        "int2ByteString_hex": "7f"
+      },
+      {
+        "input": "128",
+        "int2ByteString_hex": "8000"
+      },
+      {
+        "input": "255",
+        "int2ByteString_hex": "ff00"
+      },
+      {
+        "input": "256",
+        "int2ByteString_hex": "0001"
+      },
+      {
+        "input": "-128",
+        "int2ByteString_hex": "8080"
+      },
+      {
+        "input": "12345678901234567890",
+        "int2ByteString_hex": "d20a1feb8ca954ab00"
+      }
+    ],
+    "int2ByteString_sized": [
+      {
+        "input": "0",
+        "width": "4",
+        "int2ByteString_hex": "00000000"
+      },
+      {
+        "input": "0",
+        "width": "8",
+        "int2ByteString_hex": "0000000000000000"
+      },
+      {
+        "input": "1",
+        "width": "4",
+        "int2ByteString_hex": "01000000"
+      },
+      {
+        "input": "1",
+        "width": "8",
+        "int2ByteString_hex": "0100000000000000"
+      },
+      {
+        "input": "16",
+        "width": "4",
+        "int2ByteString_hex": "10000000"
+      },
+      {
+        "input": "16",
+        "width": "8",
+        "int2ByteString_hex": "1000000000000000"
+      },
+      {
+        "input": "-1",
+        "width": "4",
+        "int2ByteString_hex": "01000080"
+      },
+      {
+        "input": "-1",
+        "width": "8",
+        "int2ByteString_hex": "0100000000000080"
+      },
+      {
+        "input": "127",
+        "width": "4",
+        "int2ByteString_hex": "7f000000"
+      },
+      {
+        "input": "127",
+        "width": "8",
+        "int2ByteString_hex": "7f00000000000000"
+      },
+      {
+        "input": "128",
+        "width": "4",
+        "int2ByteString_hex": "80000000"
+      },
+      {
+        "input": "128",
+        "width": "8",
+        "int2ByteString_hex": "8000000000000000"
+      },
+      {
+        "input": "255",
+        "width": "4",
+        "int2ByteString_hex": "ff000000"
+      },
+      {
+        "input": "255",
+        "width": "8",
+        "int2ByteString_hex": "ff00000000000000"
+      },
+      {
+        "input": "256",
+        "width": "4",
+        "int2ByteString_hex": "00010000"
+      },
+      {
+        "input": "256",
+        "width": "8",
+        "int2ByteString_hex": "0001000000000000"
+      },
+      {
+        "input": "-128",
+        "width": "4",
+        "int2ByteString_hex": "80000080"
+      },
+      {
+        "input": "-128",
+        "width": "8",
+        "int2ByteString_hex": "8000000000000080"
+      },
+      {
+        "input": "12345678901234567890",
+        "width": "4",
+        "error": "12345678901234567890 cannot fit in 4 byte[s]"
+      },
+      {
+        "input": "12345678901234567890",
+        "width": "8",
+        "error": "12345678901234567890 cannot fit in 8 byte[s]"
+      }
+    ],
+    "rabinSpike_signByte": {
+      "ts_call": "int2ByteString(rabinPubKey) \u2014 sign-byte / minimal LE of the Rabin modulus n",
+      "rabinPubKey_decimal": "299203064105282833356246877326272312211594806807618858763144117360900040255598192438742206865086277473399368259092542792692767510461222235434090317947180809488013043253628476810768133011634351840110688758004086243058850832475355727214498537191261794575688914073384875009172590515101390124792698061641128218750883231920699904614892770650790726754062030442370452178641090688118514401264510797986812715565794680101583208463892760936120829296062252749815730401267255124210601301517239060286963106682526814636710728546075419979654625066279620023085282525860628769697734211405120435649399315657088115845365556079902482098760616313971661243620490129497063821924620869983799521040768472397927558512950137477216722777974646105850496842947264785931784846281795241675668538907593333325675562819230851881437949676316526852505220212888766778179812293081919897148914511691538829342987958102247974957495628326314423451580684574818258095801",
+      "int2ByteString_hex": "b98ee3196924e4d1d3bfe0115ef5b114fff01a71b7cb709b711a8de5dd3233b9b6dd6bdcb31fb1cef000c5972823973d15dcafe60d77e76486f1e0c6987b29097487391f2660f95d08822571ed4937b763f2117f7700efe59743efe2e505626d5af3175bf3d6a0fb619e03ab8490bf1f95bc08ff3f51bff849db064ac29f7ea6075c787e8b4920badb57293cc3441c78d99520370b367ce8ff0e6291c82c61e0f1a360f0997543c01ff0910dc98ea860e95fe1b6ddd4bf3e637a46226557d1a323c980ff26f0ba8c3e6227cfdf4b8175667e4eec7592a59e70f158f590adab8899b59f8bf01baff1d0bd3417cd5b064ddff5b7bad6220e2936de904f79421cde03f198e8a5340885c1af0ab77632a475cb62e069c0a73d309529ccf02245034393c0b7e4586b0ca091ca78eda398de64aad1f8d38b2843969ec7163b83408c6977659128f67528147a456b0c87d2710a7d37ca7bb0bd7dd92222c7d16605952c23d2ffb7d0008e4527af10884a5eabb50d8aa0341eff54c2e6a91abec0322f0d"
+    }
+  }
+}

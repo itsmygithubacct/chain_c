@@ -1,0 +1,19 @@
+# CMake build output
+/build/
+/build*/
+# CTest run output
+/Testing/
+# compile database
+compile_commands.json
+# compiled objects / libraries
+*.o
+*.a
+*.so
+# editor / OS cruft
+.DS_Store
+*~
+*.swp
+*.swo
+*.orig
+.idea/
+.vscode/

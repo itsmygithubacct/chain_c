@@ -1,0 +1,68 @@
+{
+    "version": 9,
+    "compilerVersion": "1.20.0+commit.693498a",
+    "contract": "RabinSpike",
+    "md5": "534b324f9f5b4a414d2b0ca651b10c15",
+    "structs": [
+        {
+            "name": "RabinSig",
+            "params": [
+                {
+                    "name": "s",
+                    "type": "int"
+                },
+                {
+                    "name": "padding",
+                    "type": "bytes"
+                }
+            ],
+            "genericTypes": []
+        }
+    ],
+    "library": [
+        {
+            "name": "RabinVerifier",
+            "params": [],
+            "properties": [],
+            "genericTypes": []
+        },
+        {
+            "name": "WitnessOnChainVerifier",
+            "params": [],
+            "properties": [],
+            "genericTypes": []
+        }
+    ],
+    "alias": [],
+    "abi": [
+        {
+            "type": "function",
+            "name": "unlock",
+            "index": 0,
+            "params": [
+                {
+                    "name": "msg",
+                    "type": "bytes"
+                },
+                {
+                    "name": "sig",
+                    "type": "RabinSig"
+                }
+            ]
+        },
+        {
+            "type": "constructor",
+            "params": [
+                {
+                    "name": "oraclePubKey",
+                    "type": "int"
+                }
+            ]
+        }
+    ],
+    "stateProps": [],
+    "buildType": "debug",
+    "file": "../rabinSpike.scrypt",
+    "hex": "<oraclePubKey>7070537952797e7676a876607f75007f77a8787682777f75607f77a87e7777766ea876607f75007f77a8787682777f75607f77a87e77777e7d777876a876607f75007f77a8787682777f75607f77a87e77777e7d777876a876607f75007f77a8787682777f75607f77a87e77777e7d777876a876607f75007f77a8787682777f75607f77a87e77777e7d777876a876607f75007f77a8787682777f75607f77a87e77777e77777601007e81775379547995527997785379979c6b6d6d6c776b6d6d6c",
+    "sourceMapFile": ""
+}

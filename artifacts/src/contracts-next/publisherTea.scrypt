@@ -1,0 +1,138 @@
+import "../../../node_modules/scrypt-ts-lib/artifacts/rabinSignature.scrypt";import "arpAttest.scrypt";
+struct __scrypt_ts_Change {  int amount;  Ripemd160 address;}
+
+contract PublisherTea {
+  static const Sha256 ZERO = Sha256(b'0000000000000000000000000000000000000000000000000000000000000000');
+  const PubKey publisherKey;
+  const PubKey approverKey;
+  const PubKey cancelKey;
+  const Sha256 publisherHash;
+  const int delaySeconds;
+  const int[3] attestorPubKeys;
+  const int quorum;
+  @state Sha256 pendingBundleHash;
+  @state Sha256 pendingFileSetRoot;
+  @state int pendingAnnounceTime;
+  @state int releaseCount;
+  bytes __scrypt_ts_ctx_hashoutputs;
+  int __scrypt_ts_ctx_locktime;
+  int __scrypt_ts_ctx_sequence;
+  int __scrypt_ts_ctx_value;
+  __scrypt_ts_Change __scrypt_ts_change;
+  constructor(PubKey publisherKey, PubKey approverKey, PubKey cancelKey, Sha256 publisherHash, int delaySeconds, int[3] attestorPubKeys, int quorum) {
+    this.publisherKey = publisherKey;
+    this.approverKey = approverKey;
+    this.cancelKey = cancelKey;
+    this.publisherHash = publisherHash;
+    this.delaySeconds = delaySeconds;
+    this.attestorPubKeys = attestorPubKeys;
+    this.quorum = quorum;
+    this.pendingBundleHash = PublisherTea.ZERO;
+    this.pendingFileSetRoot = PublisherTea.ZERO;
+    this.pendingAnnounceTime = 0;
+    this.releaseCount = 0;
+  }
+  public function announceRelease(Sig publisherSig, Sig approverSig, Sha256 bundleHash, Sha256 fileSetRoot, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress) {
+    require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
+    this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_locktime = SigHash.nLocktime(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_sequence = SigHash.nSequence(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
+    require(this.__scrypt_ts_ctx_sequence < 0xffffffff);
+    int now = this.__scrypt_ts_ctx_locktime;
+    require(checkSig(publisherSig, this.publisherKey));
+    require(checkSig(approverSig, this.approverKey));
+    require(this.pendingBundleHash == PublisherTea.ZERO);
+    require(bundleHash != PublisherTea.ZERO);
+    this.pendingBundleHash = bundleHash;
+    this.pendingFileSetRoot = fileSetRoot;
+    this.pendingAnnounceTime = now;
+    Sha256 receipt = sha256(b'415250315f414e4e4f554e43455f5631' + this.publisherHash + bundleHash + fileSetRoot + num2bin(this.releaseCount, 8) + num2bin(now, 4));
+    require(this.__scrypt_ts_ctx_hashoutputs == hash256(this.stateAndReceiptOutputs(receipt)));
+  }
+  public function activateRelease(Sig publisherSig, Sha256 activateDigest, RabinSig[3] attSigs, int[3] attSeqs, bool[3] attUsed, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress) {
+    require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
+    this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_locktime = SigHash.nLocktime(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_sequence = SigHash.nSequence(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
+    require(this.__scrypt_ts_ctx_sequence < 0xffffffff);
+    int now = this.__scrypt_ts_ctx_locktime;
+    require(checkSig(publisherSig, this.publisherKey));
+    require(this.pendingBundleHash != PublisherTea.ZERO);
+    require(now >= this.pendingAnnounceTime + this.delaySeconds);
+    int valid = 0;
+    loop (3) : i {
+        if(attUsed[i]) {
+          require(RabinVerifier.verifySig(ArpAttest.attestationMsg(attSeqs[i], activateDigest), attSigs[i], this.attestorPubKeys[i]));
+          valid += 1;
+        }
+      }
+    require(valid >= this.quorum);
+    Sha256 receipt = sha256(b'415250315f414354524350545f5631' + this.publisherHash + activateDigest + num2bin(this.releaseCount, 8) + num2bin(now, 4));
+    this.pendingBundleHash = PublisherTea.ZERO;
+    this.pendingFileSetRoot = PublisherTea.ZERO;
+    this.pendingAnnounceTime = 0;
+    this.releaseCount += 1;
+    require(this.__scrypt_ts_ctx_hashoutputs == hash256(this.stateAndReceiptOutputs(receipt)));
+  }
+  public function cancelPending(Sig cancelSig, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress) {
+    require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
+    this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_locktime = SigHash.nLocktime(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_sequence = SigHash.nSequence(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
+    require(this.__scrypt_ts_ctx_sequence < 0xffffffff);
+    int now = this.__scrypt_ts_ctx_locktime;
+    require(checkSig(cancelSig, this.cancelKey));
+    require(this.pendingBundleHash != PublisherTea.ZERO);
+    Sha256 receipt = sha256(b'415250315f43414e43454c5f5631' + this.publisherHash + this.pendingBundleHash + num2bin(now, 4));
+    this.pendingBundleHash = PublisherTea.ZERO;
+    this.pendingFileSetRoot = PublisherTea.ZERO;
+    this.pendingAnnounceTime = 0;
+    require(this.__scrypt_ts_ctx_hashoutputs == hash256(this.stateAndReceiptOutputs(receipt)));
+  }
+  public function invalidateRelease(Sig cancelSig, Sha256 activateDigest, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress) {
+    require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
+    this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_locktime = SigHash.nLocktime(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_sequence = SigHash.nSequence(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
+    require(this.__scrypt_ts_ctx_sequence < 0xffffffff);
+    int now = this.__scrypt_ts_ctx_locktime;
+    require(checkSig(cancelSig, this.cancelKey));
+    Sha256 receipt = sha256(b'415250315f494e56414c49444154455f5631' + this.publisherHash + activateDigest + num2bin(now, 4));
+    require(this.__scrypt_ts_ctx_hashoutputs == hash256(this.stateAndReceiptOutputs(receipt)));
+  }
+  public function retire(Sig publisherSig, Sig approverSig, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress) {
+    require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
+    this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_locktime = SigHash.nLocktime(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_sequence = SigHash.nSequence(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
+    require(checkSig(publisherSig, this.publisherKey));
+    require(checkSig(approverSig, this.approverKey));
+    bytes payout = Utils.buildOutput(Utils.buildPublicKeyHashScript(hash160(this.publisherKey)), this.__scrypt_ts_ctx_value);
+    bytes outputs = payout;
+    if(this.__scrypt_ts_change.amount > 0) {
+        outputs += this.buildChangeOutput();
+      }
+    require(this.__scrypt_ts_ctx_hashoutputs == hash256(outputs));
+  }
+  private function stateAndReceiptOutputs(Sha256 receipt) : bytes {
+    bytes stateOutput = this.buildStateOutput(this.__scrypt_ts_ctx_value);
+    bytes receiptOutput = Utils.buildOutput(Utils.buildOpreturnScript(receipt), 0);
+    bytes outputs = stateOutput + receiptOutput;
+    if(this.__scrypt_ts_change.amount > 0) {
+        outputs += this.buildChangeOutput();
+      }
+    return outputs;
+  }
+  function buildStateOutput(int amount) : bytes {  return Utils.buildOutput(this.getStateScript(), amount);}
+  function buildChangeOutput() : bytes {  return this.__scrypt_ts_change.amount > 0 ? Utils.buildOutput(Utils.buildPublicKeyHashScript(this.__scrypt_ts_change.address), this.__scrypt_ts_change.amount) : b'';}
+}

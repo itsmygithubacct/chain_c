@@ -1,0 +1,28 @@
+{
+  "_meta": {
+    "description": "Byte-exact golden vectors captured from the authoritative TypeScript chain layer for the C port to pin against.",
+    "capturedAt": "2026-06-25T19:57:23.309Z",
+    "capture_command": "cd chain && npx ts-node --compiler-options '{\"module\":\"commonjs\",\"esModuleInterop\":true}' .golden_capture/capture.ts > ../chain_c/tests/golden/golden.json",
+    "fixed_priv_key_bn_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+    "rabin_security_level": 6,
+    "rabin_seed_hex": "42424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242"
+  },
+  "mimc7": {
+    "ts_call": "Mimc7.hash(limit, salt) and commitLimit (src/zk/limitCommitment.ts)",
+    "input": {
+      "limit": "1000",
+      "salt": "42"
+    },
+    "mimc7_hash_decimal": "10025378560806186074443659034927597894808578558948732736767174265523349824461",
+    "SNARK_SCALAR_FIELD_decimal": "21888242871839275222246405745257275088548364400416034343698204186575808495617",
+    "commitLimit_with_fixed_salt": {
+      "limit": "1000",
+      "salt": "42",
+      "commitment_decimal": "10025378560806186074443659034927597894808578558948732736767174265523349824461"
+    },
+    "commitLimit_live_shape": {
+      "note": "salt is random (248-bit); value not golden, structure is commitment=Mimc7.hash(limit,salt)",
+      "commitment_lt_field": true
+    }
+  }
+}

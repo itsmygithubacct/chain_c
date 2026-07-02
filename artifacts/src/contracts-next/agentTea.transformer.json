@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "errors": [],
+  "scryptfile": "src/contracts-next/agentTea.scrypt",
+  "sourceMapFile": "src/contracts-next/agentTea.scrypt.map",
+  "ctxMethods": [
+    "executeAction",
+    "stake",
+    "slashValidator",
+    "recover",
+    "revoke"
+  ]
+}

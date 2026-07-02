@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "errors": [],
+  "scryptfile": "src/contracts-next/attestorTea.scrypt",
+  "sourceMapFile": "src/contracts-next/attestorTea.scrypt.map",
+  "ctxMethods": [
+    "slashEquivocation",
+    "stake",
+    "withdraw"
+  ]
+}

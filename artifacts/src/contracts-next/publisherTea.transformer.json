@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "errors": [],
+  "scryptfile": "src/contracts-next/publisherTea.scrypt",
+  "sourceMapFile": "src/contracts-next/publisherTea.scrypt.map",
+  "ctxMethods": [
+    "announceRelease",
+    "activateRelease",
+    "cancelPending",
+    "invalidateRelease",
+    "retire"
+  ]
+}

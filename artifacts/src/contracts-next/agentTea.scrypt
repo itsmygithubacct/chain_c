@@ -1,0 +1,209 @@
+import "../../../node_modules/scrypt-ts-lib/artifacts/rabinSignature.scrypt";
+struct __scrypt_ts_Change {  int amount;  Ripemd160 address;}
+
+contract AgentTea {
+  const PubKey owner;
+  @state PubKey agent;
+  const Sha256 ricardianHash;
+  const int perTxLimit;
+  const int dailyLimit;
+  const int windowDuration;
+  const int graduationThreshold;
+  const int validatorThreshold;
+  const int designatedValidatorPubKey;
+  const int validatorRabinPubKey;
+  const int[3] recoveryKeys;
+  const int recoveryThreshold;
+  @state int txCount;
+  @state int spentInWindow;
+  @state int windowStart;
+  @state int tier;
+  @state int recoveryCount;
+  bytes __scrypt_ts_ctx_hashprevouts;
+  bytes __scrypt_ts_ctx_hashoutputs;
+  int __scrypt_ts_ctx_locktime;
+  int __scrypt_ts_ctx_sequence;
+  bytes __scrypt_ts_ctx_outpoint_txid;
+  int __scrypt_ts_ctx_outpoint_outputindex;
+  int __scrypt_ts_ctx_value;
+  __scrypt_ts_Change __scrypt_ts_change;
+  bytes __scrypt_ts_prevouts;
+  constructor(PubKey owner, PubKey agent, Sha256 ricardianHash, int perTxLimit, int dailyLimit, int windowDuration, int graduationThreshold, int validatorThreshold, int designatedValidatorPubKey, int validatorRabinPubKey, int[3] recoveryKeys, int recoveryThreshold) {
+    this.owner = owner;
+    this.agent = agent;
+    this.ricardianHash = ricardianHash;
+    this.perTxLimit = perTxLimit;
+    this.dailyLimit = dailyLimit;
+    this.windowDuration = windowDuration;
+    this.graduationThreshold = graduationThreshold;
+    this.validatorThreshold = validatorThreshold;
+    this.designatedValidatorPubKey = designatedValidatorPubKey;
+    this.validatorRabinPubKey = validatorRabinPubKey;
+    this.recoveryKeys = recoveryKeys;
+    this.recoveryThreshold = recoveryThreshold;
+    this.txCount = 0;
+    this.spentInWindow = 0;
+    this.windowStart = 0;
+    this.tier = 1;
+    this.recoveryCount = 0;
+  }
+  function checkInputZero() : bool {
+    require(hash256(this.__scrypt_ts_prevouts) == this.__scrypt_ts_ctx_hashprevouts);
+    bytes ownOutpoint = this.__scrypt_ts_ctx_outpoint_txid + num2bin(this.__scrypt_ts_ctx_outpoint_outputindex, 4);
+    require(this.__scrypt_ts_prevouts[0 : 36] == ownOutpoint);
+    return true;
+  }
+  static function attestationMsg(Sha256 ricardianHash, PubKey agent, int validatorPubKey, int amount, int attestedLimit, Sha256 receiptHash) : bytes {
+    return (b'41474e545f4154544553545f5631' + ricardianHash + agent + pack(validatorPubKey) + num2bin(amount, 8) + num2bin(attestedLimit, 8) + receiptHash);
+  }
+  public function executeAction(Sig agentSig, Sig counterpartySig, PubKey counterparty, int amount, Sha256 actionHash, Sha256 provenanceHash, int attestedLimit, RabinSig validatorSig, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress, bytes __scrypt_ts_prevouts) {
+    require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
+    this.__scrypt_ts_ctx_hashprevouts = SigHash.hashPrevouts(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_locktime = SigHash.nLocktime(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_sequence = SigHash.nSequence(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_outpoint_outputindex = unpack(SigHash.outpoint(__scrypt_ts_txPreimage)[32 :]);
+    this.__scrypt_ts_ctx_outpoint_txid = SigHash.outpoint(__scrypt_ts_txPreimage)[0:32];
+    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
+    require(hash256(__scrypt_ts_prevouts) == this.__scrypt_ts_ctx_hashprevouts);
+    this.__scrypt_ts_prevouts = __scrypt_ts_prevouts;
+    this.checkInputZero();
+    require(this.__scrypt_ts_ctx_sequence < 0xffffffff);
+    int now = this.__scrypt_ts_ctx_locktime;
+    require(checkSig(agentSig, this.agent));
+    require(checkSig(counterpartySig, counterparty));
+    require(amount > 0);
+    require(amount <= this.perTxLimit);
+    int windowStart = this.windowStart;
+    int spent = this.spentInWindow;
+    if(now - windowStart >= this.windowDuration) {
+        windowStart = now;
+        spent = 0;
+      }
+    spent += amount;
+    require(spent <= this.dailyLimit);
+    bytes receipt = this.ricardianHash + this.agent + counterparty + num2bin(amount, 8) + actionHash + provenanceHash + num2bin(this.txCount, 8) + num2bin(now, 4);
+    Sha256 receiptHash = sha256(receipt);
+    if(amount >= this.validatorThreshold) {
+        require(amount <= attestedLimit);
+        bytes attestation = AgentTea.attestationMsg(this.ricardianHash, this.agent, this.designatedValidatorPubKey, amount, attestedLimit, receiptHash);
+        require(RabinVerifier.verifySig(attestation, validatorSig, this.designatedValidatorPubKey));
+      }
+    this.txCount += 1;
+    this.spentInWindow = spent;
+    this.windowStart = windowStart;
+    if(this.txCount >= this.graduationThreshold && this.tier < 2) {
+        this.tier = 2;
+      }
+    bytes stateOutput = this.buildStateOutput(this.__scrypt_ts_ctx_value);
+    bytes receiptOutput = Utils.buildOutput(Utils.buildOpreturnScript(receiptHash), 0);
+    bytes outputs = stateOutput + receiptOutput;
+    if(this.__scrypt_ts_change.amount > 0) {
+        outputs += this.buildChangeOutput();
+      }
+    require(this.__scrypt_ts_ctx_hashoutputs == hash256(outputs));
+  }
+  public function stake(int addAmount, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress, bytes __scrypt_ts_prevouts) {
+    require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
+    this.__scrypt_ts_ctx_hashprevouts = SigHash.hashPrevouts(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_locktime = SigHash.nLocktime(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_sequence = SigHash.nSequence(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_outpoint_outputindex = unpack(SigHash.outpoint(__scrypt_ts_txPreimage)[32 :]);
+    this.__scrypt_ts_ctx_outpoint_txid = SigHash.outpoint(__scrypt_ts_txPreimage)[0:32];
+    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
+    require(hash256(__scrypt_ts_prevouts) == this.__scrypt_ts_ctx_hashprevouts);
+    this.__scrypt_ts_prevouts = __scrypt_ts_prevouts;
+    this.checkInputZero();
+    require(addAmount > 0);
+    bytes stateOutput = this.buildStateOutput(this.__scrypt_ts_ctx_value + addAmount);
+    bytes outputs = stateOutput;
+    if(this.__scrypt_ts_change.amount > 0) {
+        outputs += this.buildChangeOutput();
+      }
+    require(this.__scrypt_ts_ctx_hashoutputs == hash256(outputs));
+  }
+  public function slashValidator(Sha256 validatedRicardianHash, PubKey validatedAgent, int attAmount, int attLimit, Sha256 attReceiptHash, RabinSig fraudSig, PubKey reporter, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress) {
+    require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
+    this.__scrypt_ts_ctx_hashprevouts = SigHash.hashPrevouts(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_locktime = SigHash.nLocktime(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_sequence = SigHash.nSequence(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_outpoint_outputindex = unpack(SigHash.outpoint(__scrypt_ts_txPreimage)[32 :]);
+    this.__scrypt_ts_ctx_outpoint_txid = SigHash.outpoint(__scrypt_ts_txPreimage)[0:32];
+    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
+    require(this.tier == 2);
+    require(attAmount > attLimit);
+    bytes attestation = AgentTea.attestationMsg(validatedRicardianHash, validatedAgent, this.validatorRabinPubKey, attAmount, attLimit, attReceiptHash);
+    require(RabinVerifier.verifySig(attestation, fraudSig, this.validatorRabinPubKey));
+    int total = this.__scrypt_ts_ctx_value;
+    int bounty = total / 2;
+    int burn = total - bounty;
+    bytes bountyOutput = Utils.buildOutput(Utils.buildPublicKeyHashScript(hash160(reporter)), bounty);
+    bytes burnOutput = Utils.buildOutput(Utils.buildOpreturnScript(b'534c415348454400'), burn);
+    bytes outputs = bountyOutput + burnOutput;
+    if(this.__scrypt_ts_change.amount > 0) {
+        outputs += this.buildChangeOutput();
+      }
+    require(this.__scrypt_ts_ctx_hashoutputs == hash256(outputs));
+  }
+  static function recoveryMsg(Sha256 ricardianHash, PubKey newAgent, int recoveryCount) : bytes {
+    return (b'41474e545f5245434f5645525f5631' + ricardianHash + newAgent + num2bin(recoveryCount, 8));
+  }
+  public function recover(PubKey newAgent, bool[3] recoverUsed, RabinSig[3] recoverySigs, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress, bytes __scrypt_ts_prevouts) {
+    require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
+    this.__scrypt_ts_ctx_hashprevouts = SigHash.hashPrevouts(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_locktime = SigHash.nLocktime(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_sequence = SigHash.nSequence(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_outpoint_outputindex = unpack(SigHash.outpoint(__scrypt_ts_txPreimage)[32 :]);
+    this.__scrypt_ts_ctx_outpoint_txid = SigHash.outpoint(__scrypt_ts_txPreimage)[0:32];
+    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
+    require(hash256(__scrypt_ts_prevouts) == this.__scrypt_ts_ctx_hashprevouts);
+    this.__scrypt_ts_prevouts = __scrypt_ts_prevouts;
+    this.checkInputZero();
+    bytes msg = AgentTea.recoveryMsg(this.ricardianHash, newAgent, this.recoveryCount);
+    int valid = 0;
+    loop (3) : i {
+        if(recoverUsed[i]) {
+          require(RabinVerifier.verifySig(msg, recoverySigs[i], this.recoveryKeys[i]));
+          valid += 1;
+        }
+      }
+    require(valid >= this.recoveryThreshold);
+    this.agent = newAgent;
+    this.recoveryCount += 1;
+    Sha256 receiptHash = sha256(msg + num2bin(this.txCount, 8));
+    bytes stateOutput = this.buildStateOutput(this.__scrypt_ts_ctx_value);
+    bytes receiptOutput = Utils.buildOutput(Utils.buildOpreturnScript(receiptHash), 0);
+    bytes outputs = stateOutput + receiptOutput;
+    if(this.__scrypt_ts_change.amount > 0) {
+        outputs += this.buildChangeOutput();
+      }
+    require(this.__scrypt_ts_ctx_hashoutputs == hash256(outputs));
+  }
+  public function revoke(Sig ownerSig, SigHashPreimage __scrypt_ts_txPreimage, int __scrypt_ts_changeAmount, Ripemd160 __scrypt_ts_changeAddress) {
+    require(Tx.checkPreimageSigHashType(__scrypt_ts_txPreimage, SigHashType(b'41')));
+    this.__scrypt_ts_ctx_hashprevouts = SigHash.hashPrevouts(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_hashoutputs = SigHash.hashOutputs(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_locktime = SigHash.nLocktime(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_sequence = SigHash.nSequence(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_ctx_outpoint_outputindex = unpack(SigHash.outpoint(__scrypt_ts_txPreimage)[32 :]);
+    this.__scrypt_ts_ctx_outpoint_txid = SigHash.outpoint(__scrypt_ts_txPreimage)[0:32];
+    this.__scrypt_ts_ctx_value = SigHash.value(__scrypt_ts_txPreimage);
+    this.__scrypt_ts_change = {__scrypt_ts_changeAmount, __scrypt_ts_changeAddress};
+    require(checkSig(ownerSig, this.owner));
+    bytes payout = Utils.buildOutput(Utils.buildPublicKeyHashScript(hash160(this.owner)), this.__scrypt_ts_ctx_value);
+    bytes outputs = payout;
+    if(this.__scrypt_ts_change.amount > 0) {
+        outputs += this.buildChangeOutput();
+      }
+    require(this.__scrypt_ts_ctx_hashoutputs == hash256(outputs));
+  }
+  function buildStateOutput(int amount) : bytes {  return Utils.buildOutput(this.getStateScript(), amount);}
+  function buildChangeOutput() : bytes {  return this.__scrypt_ts_change.amount > 0 ? Utils.buildOutput(Utils.buildPublicKeyHashScript(this.__scrypt_ts_change.address), this.__scrypt_ts_change.amount) : b'';}
+}

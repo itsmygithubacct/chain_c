@@ -1,0 +1,22 @@
+{
+  "_meta": {
+    "description": "Byte-exact golden vectors captured from the authoritative TypeScript chain layer for the C port to pin against.",
+    "capturedAt": "2026-06-25T19:57:23.309Z",
+    "capture_command": "cd chain && npx ts-node --compiler-options '{\"module\":\"commonjs\",\"esModuleInterop\":true}' .golden_capture/capture.ts > ../chain_c/tests/golden/golden.json",
+    "fixed_priv_key_bn_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+    "rabin_security_level": 6,
+    "rabin_seed_hex": "42424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242"
+  },
+  "provenance": {
+    "ts_call": "provenancePreimage / computeProvenanceHash (src/provenance.ts)",
+    "input": {
+      "datasetId": "ds-1",
+      "modelId": "bonsai-8b",
+      "version": "1.0.0",
+      "licenceTag": "CC-BY-4.0"
+    },
+    "provenancePreimage_hex": "0464732d3109626f6e7361692d386205312e302e300943432d42592d342e30",
+    "computeProvenanceHash_hex": "a713aa466836e36a0bf118d167f947ebff6139553f32a5f9859278b5d1ca51ca",
+    "ZERO_PROVENANCE_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}

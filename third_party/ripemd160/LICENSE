@@ -1,0 +1,14 @@
+RIPEMD-160 implementation — public domain
+========================================
+
+The files ripemd160.c / ripemd160.h in this directory are a standalone
+RIPEMD-160 implementation written for this project directly from the public
+RIPEMD-160 specification:
+
+    H. Dobbertin, A. Bosselaers, B. Preneel,
+    "RIPEMD-160: A Strengthened Version of RIPEMD" (1996).
+
+This implementation is released into the public domain. You may use, copy,
+modify, and distribute it for any purpose, with or without attribution, and
+without warranty of any kind. It has been verified against the canonical
+RIPEMD-160 test vectors.

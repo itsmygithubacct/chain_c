@@ -1,0 +1,61 @@
+chain_c
+Copyright 2026 chain_c contributors
+
+This product includes software developed by the chain_c contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+================================================================================
+Provenance
+================================================================================
+
+chain_c is a C port of the Priscilla BSV chain layer, a TypeScript / scrypt-ts
+codebase. The compiled contract artifacts (artifacts/), the Ricardian charter
+prose (legal/), and the circom circuit sources (circuits/) originate from that
+upstream project and are redistributed here so the repository is self-contained.
+
+================================================================================
+Third-party components
+================================================================================
+
+This repository vendors the following third-party code under third_party/.
+Each retains its own license; the texts are included alongside the sources.
+
+- cJSON (third_party/cJSON/)
+  JSON parser/serializer. Copyright (c) 2009-2017 Dave Gamble and cJSON
+  contributors. Licensed under the MIT License. See third_party/cJSON/LICENSE.
+
+- Unity (third_party/unity/)
+  C unit-test framework. Copyright (c) 2007-2021 Mike Karlesky, Mark VanderVoord,
+  Greg Williams. Licensed under the MIT License. See third_party/unity/LICENSE.txt.
+
+- RIPEMD-160 (third_party/ripemd160/)
+  Standalone RIPEMD-160 implementation written for this project from the public
+  RIPEMD-160 specification (Dobbertin, Bosselaers, Preneel, 1996). Released into
+  the public domain. Verified against the canonical RIPEMD-160 test vectors.
+
+- MiMC7 round constants (third_party/mimc7_consts/mimc7_consts.h)
+  The 91 MiMC7 round constants are numerical data (keccak-seeded, as specified by
+  circomlib) copied verbatim so they are never re-derived at runtime. They are
+  reproduced as data for interoperability with the circomlib/scrypt-ts MiMC7 hash.
+
+================================================================================
+System libraries (linked, not vendored)
+================================================================================
+
+chain_c links against, but does not redistribute, the following system
+libraries, which carry their own licenses:
+
+- libsecp256k1 (ECDSA)            — MIT
+- OpenSSL libcrypto (SHA/BN/AES)  — Apache License 2.0
+- libcurl (HTTP)                  — curl license (MIT/X-style)

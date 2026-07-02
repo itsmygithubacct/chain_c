@@ -1,0 +1,50 @@
+{
+  "_meta": {
+    "description": "Byte-exact golden vectors captured from the authoritative TypeScript chain layer for the C port to pin against.",
+    "capturedAt": "2026-06-25T19:57:23.309Z",
+    "capture_command": "cd chain && npx ts-node --compiler-options '{\"module\":\"commonjs\",\"esModuleInterop\":true}' .golden_capture/capture.ts > ../chain_c/tests/golden/golden.json",
+    "fixed_priv_key_bn_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+    "rabin_security_level": 6,
+    "rabin_seed_hex": "42424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242"
+  },
+  "reputationIndexer": {
+    "ts_call": "reputationScore(receipts, now, lambda) (src/reputationIndexer.ts)",
+    "inputs": {
+      "now": 1000000,
+      "lambda": 0.001,
+      "receipts": [
+        {
+          "txid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "time": 999000,
+          "receiptHash": "1111111111111111111111111111111111111111111111111111111111111111",
+          "valid": true
+        },
+        {
+          "txid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "time": 990000,
+          "receiptHash": "2222222222222222222222222222222222222222222222222222222222222222",
+          "valid": true
+        },
+        {
+          "txid": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "time": 900000,
+          "receiptHash": "3333333333333333333333333333333333333333333333333333333333333333",
+          "valid": false
+        }
+      ]
+    },
+    "score": {
+      "rho": 1,
+      "weightTotal": 0.3679248411012048,
+      "count": 3
+    },
+    "halfLife_check": {
+      "inputs": {
+        "now": 1000000,
+        "lambda": 2.674178937345468e-07,
+        "halfLifeSeconds": 2592000
+      },
+      "weightTotal": 0.5
+    }
+  }
+}

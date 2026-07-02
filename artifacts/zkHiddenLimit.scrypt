@@ -1,0 +1,12 @@
+import "../node_modules/scrypt-ts-lib/artifacts/zk/g16bn256.scrypt";import "../node_modules/scrypt-ts-lib/artifacts/hash/mimc7.scrypt";
+
+contract ZkHiddenLimit {
+  const VerifyingKey vk;
+  const int limitCommitment;
+  public function attest(int amount, Proof proof) {
+    require(amount > 0);
+    int input = Mimc7.hash(amount, this.limitCommitment);
+    int[1] inputs = [input];
+    require(G16BN256.verify(inputs, proof, this.vk));
+  }
+}

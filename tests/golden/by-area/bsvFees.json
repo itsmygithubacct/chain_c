@@ -1,0 +1,32 @@
+{
+  "_meta": {
+    "description": "Byte-exact golden vectors captured from the authoritative TypeScript chain layer for the C port to pin against.",
+    "capturedAt": "2026-06-25T19:57:23.309Z",
+    "capture_command": "cd chain && npx ts-node --compiler-options '{\"module\":\"commonjs\",\"esModuleInterop\":true}' .golden_capture/capture.ts > ../chain_c/tests/golden/golden.json",
+    "fixed_priv_key_bn_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+    "rabin_security_level": 6,
+    "rabin_seed_hex": "42424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242"
+  },
+  "bsvFees": {
+    "ts_call": "feeForSize / sendTimeFeeWindow / cpfpChildFee / needsFeeBump / isFeeInSendWindow",
+    "feeForSize_250_at_50": 13,
+    "feeForSize_1000_at_50": 50,
+    "sendTimeFeeWindow_250_at_50": {
+      "min": 13,
+      "max": 39,
+      "recommended": 17
+    },
+    "cpfpChildFee_sample": {
+      "input": {
+        "parentBytes": 250,
+        "parentFeePaid": 5,
+        "childBytes": 200,
+        "targetFeerate": 50
+      },
+      "output": 546
+    },
+    "needsFeeBump_10": true,
+    "needsFeeBump_60": false,
+    "isFeeInSendWindow_13_250_50": true
+  }
+}

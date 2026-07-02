@@ -1,0 +1,7 @@
+{
+  "success": true,
+  "errors": [],
+  "scryptfile": "src/contracts-next/arpAttest.scrypt",
+  "sourceMapFile": "src/contracts-next/arpAttest.scrypt.map",
+  "ctxMethods": []
+}

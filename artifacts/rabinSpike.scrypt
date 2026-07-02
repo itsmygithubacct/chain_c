@@ -1,0 +1,8 @@
+import "../node_modules/scrypt-ts-lib/artifacts/rabinSignature.scrypt";
+
+contract RabinSpike {
+  const int oraclePubKey;
+  public function unlock(bytes msg, RabinSig sig) {
+    require(RabinVerifier.verifySig(msg, sig, this.oraclePubKey));
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "errors": [],
+  "scryptfile": "ricardianTea.scrypt",
+  "sourceMapFile": "ricardianTea.scrypt.map",
+  "ctxMethods": [
+    "executeTea",
+    "slash",
+    "updateSlashCheckpoint",
+    "revoke"
+  ]
+}

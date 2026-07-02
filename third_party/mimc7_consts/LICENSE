@@ -1,0 +1,18 @@
+MiMC7 round constants — attribution
+===================================
+
+mimc7_consts.h contains the 91 MiMC7 round constants as numerical data. These
+constants are the keccak-seeded round constants specified by circomlib's MiMC7
+hash (as also shipped in scrypt-ts-lib), reproduced verbatim so that the C
+implementation never re-derives them at runtime and stays interoperable with the
+circomlib / scrypt-ts MiMC7 hash.
+
+The values are mathematical/numerical data, not program code. circomlib is
+distributed by iden3 under the GNU GPL v3; these numeric round constants are
+included here as data for interoperability. The MiMC7 algorithm itself is from:
+
+    A. Albrecht, L. Grassi, C. Rechberger, A. Roy, T. Tiessen,
+    "MiMC: Efficient Encryption and Cryptographic Hashing with Minimal
+    Multiplicative Complexity" (ASIACRYPT 2016).
+
+Upstream constants: https://github.com/iden3/circomlib (circuits/mimc.circom).

@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config \
+            libsecp256k1-dev libssl-dev libcurl4-openssl-dev
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Test (unit + golden + zk-gated; excludes live-network)
+        run: ctest --test-dir build --output-on-failure -LE net
+
+  asan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config \
+            libsecp256k1-dev libssl-dev libcurl4-openssl-dev
+      - name: Configure (ASan/UBSan)
+        run: cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug -DBONSAI_ASAN=ON
+      - name: Build
+        run: cmake --build build-asan -j
+      - name: Test
+        # UBSAN_OPTIONS/ASAN_OPTIONS make the sanitizers HARD-FAIL: UBSan halts on
+        # the first finding (paired with -fno-sanitize-recover=undefined in the
+        # build) and ASan aborts, so a failure actually fails the CI job.
+        env:
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+          ASAN_OPTIONS: abort_on_error=1
+        run: ctest --test-dir build-asan --output-on-failure -LE net
