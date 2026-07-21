@@ -8,8 +8,9 @@
  * file. The file and containing directory are fsync'd before success. */
 int agentd_write_file_atomic(const char *path, const char *text);
 
-/* Append "<tag> <txid>\n" to the state-file broadcast journal. The append and
- * directory entry are fsync'd before success; files are forced to mode 0600. */
+/* Append "<tag> <64-hex-txid>\n" to the state-file broadcast journal. Tags are
+ * limited to [A-Za-z0-9._-]+. The append and directory entry are fsync'd before
+ * success; the path must not be a symlink and files are forced to mode 0600. */
 int agentd_journal_broadcast(const char *state_file, const char *tag,
                              const char *txid);
 

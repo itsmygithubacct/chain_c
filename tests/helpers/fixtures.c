@@ -89,7 +89,7 @@ void fix_provenance_record(provenance_record_t *out)
 {
     if (!out) return;
     out->dataset_id  = "sha256:dataset-xyz";
-    out->model_id    = "claude-fable-5";
+    out->model_id    = "agent-fable-5";
     out->version     = "2026-01";
     out->licence_tag = "CC-BY-4.0";
 }

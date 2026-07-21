@@ -17,6 +17,7 @@
 static char g_dir[] = "/tmp/bonsai-agentd-persist-XXXXXX";
 static char g_state[256];
 static char g_journal[280];
+static char g_victim[280];
 
 void setUp(void)
 {
@@ -24,6 +25,7 @@ void setUp(void)
     TEST_ASSERT_NOT_NULL(mkdtemp(g_dir));
     snprintf(g_state, sizeof g_state, "%s/identity.json", g_dir);
     snprintf(g_journal, sizeof g_journal, "%s.broadcasts", g_state);
+    snprintf(g_victim, sizeof g_victim, "%s/victim.txt", g_dir);
 }
 
 void tearDown(void)
@@ -31,6 +33,7 @@ void tearDown(void)
     unsetenv("AGENTD_BROADCAST_JOURNAL");
     unlink(g_state);
     unlink(g_journal);
+    unlink(g_victim);
     rmdir(g_dir);
 }
 
@@ -73,12 +76,15 @@ static void test_atomic_state_replacement_is_private_and_leaves_no_temp(void)
 
 static void test_broadcast_journal_appends_complete_private_records(void)
 {
-    const char *first = "11aabb";
-    const char *second = "22ccdd";
+    const char *first = "1111111111111111111111111111111111111111111111111111111111111111";
+    const char *second = "22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22cc";
     TEST_ASSERT_EQUAL_INT(BNS_OK, agentd_journal_broadcast(g_state, "deploy", first));
     TEST_ASSERT_EQUAL_INT(BNS_OK, agentd_journal_broadcast(g_state, "action", second));
     char *actual = read_text(g_journal);
-    TEST_ASSERT_EQUAL_STRING("deploy 11aabb\naction 22ccdd\n", actual);
+    TEST_ASSERT_EQUAL_STRING(
+        "deploy 1111111111111111111111111111111111111111111111111111111111111111\n"
+        "action 22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22ccdd22cc\n",
+        actual);
     free(actual);
 
     struct stat st;
@@ -86,10 +92,35 @@ static void test_broadcast_journal_appends_complete_private_records(void)
     TEST_ASSERT_EQUAL_UINT(0600, st.st_mode & 0777);
 }
 
+static void test_broadcast_journal_rejects_invalid_records(void)
+{
+    const char *txid = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    TEST_ASSERT_EQUAL_INT(BNS_EINVAL, agentd_journal_broadcast(g_state, "action\ninjected", txid));
+    TEST_ASSERT_EQUAL_INT(BNS_EINVAL, agentd_journal_broadcast(g_state, "action", "11aabb"));
+    TEST_ASSERT_EQUAL_INT(
+        BNS_EINVAL,
+        agentd_journal_broadcast(
+            g_state, "action", "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"));
+    TEST_ASSERT_EQUAL_INT(-1, access(g_journal, F_OK));
+}
+
+static void test_broadcast_journal_refuses_symlink_target(void)
+{
+    const char *txid = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    TEST_ASSERT_EQUAL_INT(BNS_OK, agentd_write_file_atomic(g_victim, "unchanged\n"));
+    TEST_ASSERT_EQUAL_INT(0, symlink(g_victim, g_journal));
+    TEST_ASSERT_EQUAL_INT(BNS_EPERSIST, agentd_journal_broadcast(g_state, "action", txid));
+    char *actual = read_text(g_victim);
+    TEST_ASSERT_EQUAL_STRING("unchanged\n", actual);
+    free(actual);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_atomic_state_replacement_is_private_and_leaves_no_temp);
     RUN_TEST(test_broadcast_journal_appends_complete_private_records);
+    RUN_TEST(test_broadcast_journal_rejects_invalid_records);
+    RUN_TEST(test_broadcast_journal_refuses_symlink_target);
     return UNITY_END();
 }

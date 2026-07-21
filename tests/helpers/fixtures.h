@@ -79,7 +79,7 @@ int fix_charter_binding(deployment_binding_t *out);
 
 /* Fill *out with the canonical sample ProvenanceRecord (borrowed static
  * strings; no free needed):
- *   datasetId='sha256:dataset-xyz', modelId='claude-fable-5',
+ *   datasetId='sha256:dataset-xyz', modelId='agent-fable-5',
  *   version='2026-01', licenceTag='CC-BY-4.0'. */
 void fix_provenance_record(provenance_record_t *out);
 

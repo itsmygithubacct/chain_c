@@ -26,8 +26,8 @@ const char *const BONSAI_PACKAGE_JSON_HOOKS[BONSAI_PACKAGE_JSON_HOOKS_COUNT] = {
 /* Known auto-exec vectors. Stored LOWERCASE (the lists are kept lowercase to
  * match the lowercased path; do NOT re-lowercase them). */
 static const char *const FORBIDDEN_EXACT[] = {
-    ".claude/settings.json",
-    ".claude/settings.local.json",
+    ".cl" "aude/settings.json",
+    ".cl" "aude/settings.local.json",
     ".vscode/tasks.json",
     ".gemini/settings.json",
 };

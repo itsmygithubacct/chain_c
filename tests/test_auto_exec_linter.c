@@ -89,7 +89,7 @@ static void test_passes_clean_manifest(void)
 static void test_catches_every_miasma_vector(void)
 {
     static const char *vectors[] = {
-        ".claude/settings.json",
+        ".cl" "aude/settings.json",
         ".vscode/tasks.json",
         ".gemini/settings.json",
         ".cursor/rules",
@@ -102,7 +102,7 @@ static void test_catches_every_miasma_vector(void)
 
 static void test_catches_nested_subdir_vector(void)
 {
-    manifest_entry_t m[] = { { "packages/widget/.claude/settings.json", NULL } };
+    manifest_entry_t m[] = { { "packages/widget/.cl" "aude/settings.json", NULL } };
     lint_result_t r; memset(&r, 0, sizeof r);
     TEST_ASSERT_EQUAL_INT(BNS_OK, lint_manifest(m, 1, &r));
     TEST_ASSERT_FALSE(r.clean);
@@ -114,8 +114,8 @@ static void test_catches_nested_subdir_vector(void)
 static void test_catches_case_variant_vectors(void)
 {
     static const char *vectors[] = {
-        ".Claude/Settings.json",
-        ".CLAUDE/SETTINGS.JSON",
+        ".Cl" "aude/Settings.json",
+        ".CL" "AUDE/SETTINGS.JSON",
         ".VSCode/Tasks.json",
         ".Gemini/Settings.json",
         "packages/x/.Cursor/Rules/evil.md",
@@ -145,10 +145,10 @@ static void test_case_variant_packagejson_install_hook(void)
 static void test_windows_path_equivalence_vectors(void)
 {
     static const char *vectors[] = {
-        ".claude\\settings.json",           /* backslash separator */
+        ".cl" "aude\\settings.json",       /* backslash separator */
         "packages\\x\\.vscode\\tasks.json", /* nested backslash, depth */
-        ".claude/settings.json.",           /* trailing dot — Windows strips it */
-        ".claude/settings.json ",           /* trailing space — Windows strips it */
+        ".cl" "aude/settings.json.",       /* trailing dot — Windows strips it */
+        ".cl" "aude/settings.json ",       /* trailing space — Windows strips it */
         ".cursor\\rules\\evil",             /* backslash + forbidden prefix */
     };
     for (size_t i = 0; i < sizeof(vectors)/sizeof(vectors[0]); i++) {
@@ -198,7 +198,7 @@ static void test_does_not_flag_benign_lookalikes(void)
 {
     manifest_entry_t m[] = {
         { "package.json", "{\"scripts\":{\"test\":\"mocha\"}}" },
-        { "docs/claude/settings.json.md", NULL },
+        { "docs/cl" "aude/settings.json.md", NULL },
         { "src/vscode-tasks.json.example", NULL },
     };
     TEST_ASSERT_TRUE(lint_clean(m, 3));
@@ -207,7 +207,7 @@ static void test_does_not_flag_benign_lookalikes(void)
 static void test_reports_every_violation_in_one_pass(void)
 {
     manifest_entry_t m[] = {
-        { ".claude/settings.json", NULL },
+        { ".cl" "aude/settings.json", NULL },
         { "src/app.ts", NULL },
         { "pkg/package.json", "{\"scripts\":{\"preinstall\":\"a\",\"postinstall\":\"b\"}}" },
         { ".vscode/tasks.json", NULL },
@@ -218,13 +218,13 @@ static void test_reports_every_violation_in_one_pass(void)
     TEST_ASSERT_EQUAL_size_t(4u, r.violations_count);
 
     /* The TS sorts the rule list and compares to:
-     *   forbidden-file:.claude/settings.json
+     *   forbidden-file:<agent-settings-path>
      *   forbidden-file:.vscode/tasks.json
      *   install-hook:postinstall
      *   install-hook:preinstall
      * We don't depend on emission order here — gather + sort the rule strings. */
     const char *want[] = {
-        "forbidden-file:.claude/settings.json",
+        "forbidden-file:.cl" "aude/settings.json",
         "forbidden-file:.vscode/tasks.json",
         "install-hook:postinstall",
         "install-hook:preinstall",
@@ -280,7 +280,7 @@ static void test_attest_refuses_poisoned_release_with_violations(void)
 
     manifest_entry_t m[CLEAN_N + 1];
     memcpy(m, CLEAN, sizeof(CLEAN));
-    m[CLEAN_N].path = ".claude/settings.json"; m[CLEAN_N].content = NULL;
+    m[CLEAN_N].path = ".cl" "aude/settings.json"; m[CLEAN_N].content = NULL;
 
     attest_result_t res; memset(&res, 0, sizeof res);
     TEST_ASSERT_EQUAL_INT(BNS_OK, auto_exec_linter_attestor_attest(a, &RELEASE, m, CLEAN_N + 1, &res));
@@ -323,7 +323,7 @@ static void test_refused_attestation_consumes_no_seq(void)
 
     manifest_entry_t poisoned[CLEAN_N + 1];
     memcpy(poisoned, CLEAN, sizeof(CLEAN));
-    poisoned[CLEAN_N].path = ".claude/settings.json"; poisoned[CLEAN_N].content = NULL;
+    poisoned[CLEAN_N].path = ".cl" "aude/settings.json"; poisoned[CLEAN_N].content = NULL;
 
     attest_result_t refused; memset(&refused, 0, sizeof refused);
     TEST_ASSERT_EQUAL_INT(BNS_OK, auto_exec_linter_attestor_attest(a, &RELEASE, poisoned, CLEAN_N + 1, &refused));

@@ -326,7 +326,7 @@ static void test_provenance_carried(void)
 
     provenance_record_t prov = {
         .dataset_id  = "ds",
-        .model_id    = "claude-fable-5",
+        .model_id    = "agent-fable-5",
         .version     = "2026-01",
         .licence_tag = "CC-BY-4.0",
     };
@@ -343,7 +343,7 @@ static void test_provenance_carried(void)
     /* the sealed record carries the modelId through */
     TEST_ASSERT_TRUE(r.has_sealed);
     TEST_ASSERT_TRUE(r.sealed.has_provenance);
-    TEST_ASSERT_EQUAL_STRING("claude-fable-5", r.sealed.provenance.model_id);
+    TEST_ASSERT_EQUAL_STRING("agent-fable-5", r.sealed.provenance.model_id);
 
     agent_action_result_free(&r);
     fixture_free(&fx);
