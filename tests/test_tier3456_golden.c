@@ -1338,8 +1338,8 @@ static void area_woc_client(void)
         } else skip("woc.is_output_spent 404", "stub err");
     }
 
-    /* 11d. broadcast strips a SINGLE leading and trailing double-quote. WoC
-     * returns the txid wrapped in quotes; broadcast must strip exactly one each. */
+    /* 11d. broadcast derives the display txid from the signed bytes rather
+     * than trusting even a syntactically valid provider response. */
     {
         http_stub_entry_t script[] = {
             { "POST", "/tx/raw", 200,
@@ -1352,9 +1352,9 @@ static void area_woc_client(void)
             if (woc_client_new(&opts, &c) == BNS_OK) {
                 char *txid = NULL;
                 int rc = woc_client_broadcast(c, "00", &txid);
-                const char *want = "abc123def4567890abc123def4567890abc123def4567890abc123def4567890";
-                if (rc == BNS_OK) chk_str("woc.broadcast strips one quote each side", want, txid);
-                else fail_se("woc.broadcast strips one quote each side", want, bns_err_name(rc));
+                const char *want = "9a538906e6466ebd2617d321f71bc94e56056ce213d366773699e28158e00614";
+                if (rc == BNS_OK) chk_str("woc.broadcast uses locally computed txid", want, txid);
+                else fail_se("woc.broadcast uses locally computed txid", want, bns_err_name(rc));
                 free(txid);
                 woc_client_free(c);
             } else skip("woc.broadcast", "client new err");

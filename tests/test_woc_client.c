@@ -2,12 +2,11 @@
  * test_woc_client.c — Unity port of chain/tests/whatsOnChain.test.ts
  * (WhatsOnChainSource live ChainSource adapter) plus the wocClient quirk
  * assertions called out in the cluster guidance (interpret_tx_status reads the
- * 'blockheight' wire key; broadcast strips one quote; is_429 classification).
+ * 'blockheight' wire key; broadcast independently derives txid; is_429 classification).
  *
  * ALL OFFLINE: every HTTP exchange is served by the recording mock_http_transport
- * stub (the C port of the TS mockFetch route table). Filename contains "woc" so
- * CMake labels it 'net' (excluded from the default ctest run) but it MUST still
- * pass with zero network access.
+ * stub (the C port of the TS mockFetch route table). CMake labels this suite
+ * `unit`; it always runs with zero network access.
  *
  * Build+run directly (avoids the shared cmake race):
  *   gcc -std=c11 -D_GNU_SOURCE -Iinclude -Ithird_party/unity -Ithird_party/cJSON
@@ -20,6 +19,7 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -265,29 +265,61 @@ static void test_is_429_classification(void)
     TEST_ASSERT_FALSE(is_429(500, NULL));
 }
 
-/* broadcast strips a SINGLE leading and a SINGLE trailing double-quote only.
- * POST /tx/raw with a quoted txid body -> de-quoted txid. TS: broadcast. */
-static void test_broadcast_strips_one_quote(void)
+/* POST /tx/raw checks a conventional quoted response but returns the txid
+ * independently derived from the exact raw bytes. */
+static void test_broadcast_returns_locally_computed_txid(void)
 {
     woc_client_opts_t copts = {0};
     copts.transport = &g_transport;
     woc_client_t *client = NULL;
     TEST_ASSERT_EQUAL_INT(BNS_OK, woc_client_new(&copts, &client));
 
-    /* WoC returns the txid wrapped in JSON-string quotes. */
+    const char *expected = "c5f5b0af4c574b80644f7079a447a6553ca714d63de77f866ebc566f0fd51d28";
+    char response[68];
+    snprintf(response, sizeof response, "\"%s\"", expected);
     TEST_ASSERT_EQUAL_INT(BNS_OK, mock_http_register(
-        g_http, "POST", "/tx/raw", 200, "\"abcdef0123\"", 0, true));
+        g_http, "POST", "/tx/raw", 200, response, 0, true));
 
     char *txid = NULL;
     int rc = woc_client_broadcast(client, "deadbeef", &txid);
     TEST_ASSERT_EQUAL_INT(BNS_OK, rc);
     TEST_ASSERT_NOT_NULL(txid);
-    TEST_ASSERT_EQUAL_STRING("abcdef0123", txid);   /* one leading+trailing quote stripped */
+    TEST_ASSERT_EQUAL_STRING(expected, txid);
     free(txid);
 
     /* the request body actually carried the raw hex */
     TEST_ASSERT_TRUE(mock_http_requested(g_http, "/tx/raw"));
 
+    woc_client_free(client);
+}
+
+static void test_broadcast_never_trusts_malformed_provider_txid(void)
+{
+    woc_client_opts_t copts = {0};
+    copts.transport = &g_transport;
+    woc_client_t *client = NULL;
+    TEST_ASSERT_EQUAL_INT(BNS_OK, woc_client_new(&copts, &client));
+
+    TEST_ASSERT_EQUAL_INT(BNS_OK, mock_http_register(
+        g_http, "POST", "/tx/raw", 200, "\"abcdef0123\"", 0, true));
+    char *txid = NULL;
+    TEST_ASSERT_EQUAL_INT(BNS_OK, woc_client_broadcast(client, "deadbeef", &txid));
+    TEST_ASSERT_EQUAL_STRING(
+        "c5f5b0af4c574b80644f7079a447a6553ca714d63de77f866ebc566f0fd51d28", txid);
+    free(txid);
+    woc_client_free(client);
+}
+
+static void test_broadcast_rejects_malformed_raw_hex_before_http(void)
+{
+    woc_client_opts_t copts = {0};
+    copts.transport = &g_transport;
+    woc_client_t *client = NULL;
+    TEST_ASSERT_EQUAL_INT(BNS_OK, woc_client_new(&copts, &client));
+    char *txid = (char *)0x1;
+    TEST_ASSERT_EQUAL_INT(BNS_EPARSE, woc_client_broadcast(client, "not-hex", &txid));
+    TEST_ASSERT_NULL(txid);
+    TEST_ASSERT_FALSE(mock_http_requested(g_http, "/tx/raw"));
     woc_client_free(client);
 }
 
@@ -301,6 +333,8 @@ int main(void)
     RUN_TEST(test_drives_reputation_indexer_end_to_end);
     RUN_TEST(test_interpret_tx_status_blockheight_wire);
     RUN_TEST(test_is_429_classification);
-    RUN_TEST(test_broadcast_strips_one_quote);
+    RUN_TEST(test_broadcast_returns_locally_computed_txid);
+    RUN_TEST(test_broadcast_never_trusts_malformed_provider_txid);
+    RUN_TEST(test_broadcast_rejects_malformed_raw_hex_before_http);
     return UNITY_END();
 }

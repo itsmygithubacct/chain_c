@@ -80,8 +80,9 @@ int chain_broadcast_select_funding(woc_client_t *woc,
 /* ---- broadcast ---------------------------------------------------------- */
 
 /* Broadcast `raw_hex` (a fully-signed contract tx hex from contract_sign) via
- * POST /tx/raw. On success writes the freshly malloc'd txid to *out_txid (caller
- * frees). Thin wrapper over woc_client_broadcast that attaches a clear,
+ * POST /tx/raw. On success writes the freshly malloc'd, locally computed txid to
+ * *out_txid (caller frees). The provider body is checked but never trusted as
+ * the state identifier. Thin wrapper over woc_client_broadcast that attaches a clear,
  * verbatim error to `err` on failure.
  *
  * SAFETY: this function performs a REAL mainnet broadcast unconditionally — it

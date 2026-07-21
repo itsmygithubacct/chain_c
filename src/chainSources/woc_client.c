@@ -12,19 +12,23 @@
  *  - txStatus short-circuits to 'confirmed' WITHOUT a raw fetch when
  *    confirmations >= 1 (preserves HTTP call counts).
  *  - isOutputSpent: 404 => false (unspent; index may lag); else !!body.txid.
- *  - broadcast strips a SINGLE leading and a SINGLE trailing double-quote.
+ *  - broadcast derives txid from raw bytes and only checks the provider body.
  *  - waitForMempool checks rawTx FIRST then deadline (>= 1 attempt);
  *    waitForConfirmation order: confirmation -> unknown/dropped -> deadline.
  */
 #include "chainSources/woc_client.h"
 #include "chainSources/woc_rate_limiter.h"
 
+#include <ctype.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+#include "common/bytes.h"
+#include "common/hex.h"
+#include "crypto/hash.h"
 #include "json/json.h"
 
 /* ---- handle ------------------------------------------------------------- */
@@ -739,12 +743,55 @@ static int gated_post(void *user, int *out_status)
     return BNS_OK;
 }
 
+static int txid_from_raw_hex(const char *raw_hex, char **out_txid)
+{
+    *out_txid = NULL;
+    byte_buf_t raw;
+    byte_buf_init(&raw);
+    int rc = hex_decode(raw_hex, &raw);
+    if (rc != BNS_OK) {
+        byte_buf_free(&raw);
+        return rc;
+    }
+    if (raw.len == 0) {
+        byte_buf_free(&raw);
+        return BNS_EINVAL;
+    }
+
+    uint8_t hash[BONSAI_SHA256_LEN], display[BONSAI_SHA256_LEN];
+    sha256d(raw.data, raw.len, hash);
+    byte_buf_free(&raw);
+    for (size_t i = 0; i < BONSAI_SHA256_LEN; i++)
+        display[i] = hash[BONSAI_SHA256_LEN - 1 - i];
+    *out_txid = hex_encode(display, sizeof display);
+    return *out_txid != NULL ? BNS_OK : BNS_ENOMEM;
+}
+
+static bool response_matches_txid(const char *body, size_t start, size_t len,
+                                  const char *expected)
+{
+    if (len != 2 * BONSAI_SHA256_LEN) return false;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)body[start + i];
+        if (!isxdigit(c) || (char)tolower(c) != expected[i]) return false;
+    }
+    return true;
+}
+
 int woc_client_broadcast(woc_client_t *c, const char *raw_hex, char **out_txid)
 {
     if (c == NULL || raw_hex == NULL || out_txid == NULL) {
         return BNS_EINVAL;
     }
     *out_txid = NULL;
+
+    /* A transaction's id is a property of its signed bytes, not of the HTTP
+     * provider's response. Compute it before sending so malformed raw hex is
+     * rejected locally and every accepted broadcast is persisted under the
+     * correct, independently derived id. */
+    char *expected_txid = NULL;
+    int rc = txid_from_raw_hex(raw_hex, &expected_txid);
+    if (rc != BNS_OK) return rc;
 
     /* Debug hook: dump the exact raw tx hex about to be broadcast (BONSAI_DUMP_RAWTX=1). */
     if (getenv("BONSAI_DUMP_RAWTX") != NULL) {
@@ -754,22 +801,26 @@ int woc_client_broadcast(woc_client_t *c, const char *raw_hex, char **out_txid)
     /* JSON body {"txhex": rawHex} via the escaping serializer. */
     cJSON *obj = cJSON_CreateObject();
     if (obj == NULL) {
+        free(expected_txid);
         return BNS_ENOMEM;
     }
     if (cJSON_AddStringToObject(obj, "txhex", raw_hex) == NULL) {
         cJSON_Delete(obj);
+        free(expected_txid);
         return BNS_ENOMEM;
     }
     char *json = NULL;
-    int rc = json_print_compact(obj, &json);
+    rc = json_print_compact(obj, &json);
     cJSON_Delete(obj);
     if (rc != BNS_OK) {
+        free(expected_txid);
         return rc;
     }
 
     char *url = join_url("/tx/raw");
     if (url == NULL) {
         free(json);
+        free(expected_txid);
         return BNS_ENOMEM;
     }
 
@@ -786,6 +837,7 @@ int woc_client_broadcast(woc_client_t *c, const char *raw_hex, char **out_txid)
     free(url);
     free(json);
     if (rc != BNS_OK) {
+        free(expected_txid);
         return rc;
     }
 
@@ -793,7 +845,10 @@ int woc_client_broadcast(woc_client_t *c, const char *raw_hex, char **out_txid)
     char *body = body_dup_trim(&p.res);
     http_response_free(&p.res);
     if (body == NULL) {
-        return BNS_ENOMEM;
+        fprintf(stderr, "[woc] WARNING: broadcast was accepted but its response could not be "
+                        "inspected; using locally computed txid %s for recovery/state\n", expected_txid);
+        *out_txid = expected_txid;
+        return BNS_OK;
     }
 
     size_t len = strlen(body);
@@ -806,16 +861,13 @@ int woc_client_broadcast(woc_client_t *c, const char *raw_hex, char **out_txid)
         len--;
     }
 
-    char *txid = (char *)malloc(len + 1);
-    if (txid == NULL) {
-        free(body);
-        return BNS_ENOMEM;
+    if (!response_matches_txid(body, start, len, expected_txid)) {
+        fprintf(stderr, "[woc] WARNING: broadcast returned an invalid or mismatched txid; "
+                        "using locally computed txid %s for recovery/state\n", expected_txid);
     }
-    memcpy(txid, body + start, len);
-    txid[len] = '\0';
     free(body);
 
-    *out_txid = txid;
+    *out_txid = expected_txid;
     return BNS_OK;
 }
 

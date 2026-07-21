@@ -19,6 +19,7 @@
  * dry-run plans, env handling and error strings mirror the TS exactly.
  */
 #include "scripts/agentd.h"
+#include "scripts/agentd_persistence.h"
 #include "scripts/agent_state.h"
 #include "scripts/script_support.h"
 
@@ -27,7 +28,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <inttypes.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
@@ -136,67 +136,14 @@ static int read_file(const char *path, char **out)
     return BNS_OK;
 }
 
-/* Write `text` to `path` with mode 0600 (TS: writeState writeFileSync mode 0600).
- * BNS_OK / BNS_EPERSIST. */
-static int write_file_mode(const char *path, const char *text)
+/* Report a journal failure immediately after an accepted broadcast, then keep
+ * going: the durable atomic state write is an independent recovery record. */
+static void persist_broadcast_journal(const char *state_file, const char *tag,
+                                      const char *txid)
 {
-    /* Atomic durable write. The previous truncate-in-place write destroyed the old good
-     * contents BEFORE the new bytes landed, so an interrupted write (ENOSPC / quota / signal /
-     * crash) — possibly AFTER the identity UTXO was already spent on mainnet — left a truncated
-     * STATE_FILE and lost the only local tip record. Write to a temp file, fsync, then rename()
-     * over the destination (atomic on the same filesystem); loop on short writes.
-     *
-     * The temp is created with mkstemp(): a RANDOM suffix and O_EXCL|0600 — NOT a PID-predictable
-     * O_CREAT|O_TRUNC name an attacker in a shared dir could pre-create as a symlink to have this
-     * process truncate the target (review-2 #12). The random name also avoids concurrent-writer
-     * collisions. (save_recovery_keys uses this too; its SECRET temp residue on a SIGKILL between
-     * write and rename is bounded by the 0600 mode + a private state dir.) */
-    char tmp[1200];
-    int n = snprintf(tmp, sizeof tmp, "%s.tmp.XXXXXX", path);
-    if (n < 0 || (size_t)n >= sizeof tmp) return BNS_EPERSIST;
-
-    int fd = mkstemp(tmp);   /* O_CREAT|O_EXCL, mode 0600 (POSIX.1-2008 / glibc) */
-    if (fd < 0) return BNS_EPERSIST;
-
-    size_t len = strlen(text), off = 0;
-    while (off < len) {
-        ssize_t w = write(fd, text + off, len - off);
-        if (w < 0) {
-            if (errno == EINTR) continue;
-            close(fd); unlink(tmp); return BNS_EPERSIST;
-        }
-        off += (size_t)w;
-    }
-    if (fsync(fd) != 0)  { close(fd); unlink(tmp); return BNS_EPERSIST; }
-    if (close(fd) != 0)  { unlink(tmp); return BNS_EPERSIST; }
-    if (rename(tmp, path) != 0) { unlink(tmp); return BNS_EPERSIST; }
-    return BNS_OK;
-}
-
-/* Durable txid journal. Broadcast and the full JSON STATE_FILE write are not
- * atomic: a crash after chain_broadcast_send but before write_file_mode would
- * lose the txid. The instant a broadcast succeeds we append "<tag> <txid>\n" to
- * a journal derived from STATE_FILE ("<state_file>.broadcasts", or
- * $AGENTD_BROADCAST_JOURNAL if set) so the outpoint is recoverable. Best-effort
- * and NEVER fatal — any failure is silently ignored. */
-static void journal_broadcast(const char *state_file, const char *tag,
-                              const char *txid)
-{
-    if (txid == NULL || txid[0] == '\0') return;
-    char path[1100];
-    const char *override = env_get("AGENTD_BROADCAST_JOURNAL");
-    if (override && override[0])
-        snprintf(path, sizeof path, "%s", override);
-    else if (state_file && state_file[0])
-        snprintf(path, sizeof path, "%s.broadcasts", state_file);
-    else
-        return;
-    int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0600);
-    if (fd < 0) return;
-    char line[256];
-    int n = snprintf(line, sizeof line, "%s %s\n", tag ? tag : "broadcast", txid);
-    if (n > 0) { ssize_t w = write(fd, line, (size_t)n); (void)w; }
-    close(fd);
+    if (agentd_journal_broadcast(state_file, tag, txid) != BNS_OK)
+        fprintf(stderr, "agentd WARNING: broadcast %s accepted as %s, but the durable txid journal "
+                        "could not be written; attempting the state file\n", tag, txid);
 }
 
 /* loadKey: parse {wif,address} JSON, fromWIF, assert it derives the address on
@@ -644,7 +591,7 @@ static int save_recovery_keys(const char *state_file,
     if (rc == BNS_OK) {
         char path[1200];
         recovery_store_path(state_file, path, sizeof path);
-        rc = write_file_mode(path, (const char *)txt.data);  /* mode 0600 */
+        rc = agentd_write_file_atomic(path, (const char *)txt.data);  /* mode 0600 */
     }
     byte_buf_free(&txt);
     return rc;
@@ -887,7 +834,7 @@ static int cmd_deploy(const char *state_file, bool confirm, int *out_exit_code)
     }
     printf("BROADCAST OK: %s\n", txid);
     printf("DEPLOY broadcast: %s \xe2\x86\x92 STATE_FILE %s\n", txid, state_file);
-    journal_broadcast(state_file, "deploy", txid);  /* durable record before JSON write */
+    persist_broadcast_journal(state_file, "deploy", txid);  /* durable record before JSON write */
 
     /* Persist the STATE_FILE (genesis tip = txid:0, txCount=0, deployed). */
     out_state.schema   = strdup(BONSAI_AGENT_STATE_SCHEMA);
@@ -934,7 +881,7 @@ static int cmd_deploy(const char *state_file, bool confirm, int *out_exit_code)
         out_state.history[0].txid = strdup(txid);
     }
     if (agent_state_to_json(&out_state, &state_json) != BNS_OK ||
-        write_file_mode(state_file, state_json) != BNS_OK) {
+        agentd_write_file_atomic(state_file, state_json) != BNS_OK) {
         snprintf(errmsg, sizeof errmsg, "cannot write STATE_FILE %s", state_file); goto deploy_fail;
     }
     if (persist_recovery) {
@@ -1228,7 +1175,7 @@ static int cmd_action(const char *state_file, bool confirm, int *out_exit_code)
     }
     printf("BROADCAST OK: %s\n", txid);
     printf("EXECUTE broadcast: %s\n", txid);
-    journal_broadcast(state_file, "action", txid);  /* durable record before JSON write */
+    persist_broadcast_journal(state_file, "action", txid);  /* durable record before JSON write */
 
     /* Persist the advanced state (TS agentAction state-advance + new tip). */
     {
@@ -1257,7 +1204,7 @@ static int cmd_action(const char *state_file, bool confirm, int *out_exit_code)
         }
 
         if (agent_state_to_json(&st, &state_json) != BNS_OK ||
-            write_file_mode(state_file, state_json) != BNS_OK) {
+            agentd_write_file_atomic(state_file, state_json) != BNS_OK) {
             snprintf(errmsg, sizeof errmsg, "cannot write STATE_FILE %s", state_file); goto action_fail;
         }
     }
@@ -1434,7 +1381,7 @@ static int cmd_revoke(const char *state_file, bool confirm, int *out_exit_code)
     }
     printf("BROADCAST OK: %s\n", txid);
     printf("REVOKE broadcast: %s\n", txid);
-    journal_broadcast(state_file, "revoke", txid);  /* durable record before JSON write */
+    persist_broadcast_journal(state_file, "revoke", txid);  /* durable record before JSON write */
 
     /* Persist: status=revoked, history += {op:"revoke", txid}. */
     {
@@ -1448,7 +1395,7 @@ static int cmd_revoke(const char *state_file, bool confirm, int *out_exit_code)
             st.num_history = nh + 1;
         }
         if (agent_state_to_json(&st, &state_json) != BNS_OK ||
-            write_file_mode(state_file, state_json) != BNS_OK) {
+            agentd_write_file_atomic(state_file, state_json) != BNS_OK) {
             snprintf(errmsg, sizeof errmsg, "cannot write STATE_FILE %s", state_file); goto revoke_fail;
         }
     }
@@ -1749,7 +1696,7 @@ static int cmd_recover(const char *state_file, bool confirm, int *out_exit_code)
     }
     printf("BROADCAST OK: %s\n", txid);
     printf("RECOVER broadcast: %s\n", txid);
-    journal_broadcast(state_file, "recover", txid);  /* durable record before JSON write */
+    persist_broadcast_journal(state_file, "recover", txid);  /* durable record before JSON write */
 
     /* Persist: rotate agent_pub_key, recoveryCount += 1, new tip, history += recover. */
     {
@@ -1771,7 +1718,7 @@ static int cmd_recover(const char *state_file, bool confirm, int *out_exit_code)
         }
 
         if (agent_state_to_json(&st, &state_json) != BNS_OK ||
-            write_file_mode(state_file, state_json) != BNS_OK) {
+            agentd_write_file_atomic(state_file, state_json) != BNS_OK) {
             snprintf(errmsg, sizeof errmsg, "cannot write STATE_FILE %s", state_file); goto recover_fail;
         }
     }

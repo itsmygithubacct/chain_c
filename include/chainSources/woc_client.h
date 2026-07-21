@@ -17,7 +17,8 @@
  *  - txStatus short-circuits to 'confirmed' WITHOUT a raw fetch when
  *    confirmations >= 1 (preserve to match HTTP call counts).
  *  - isOutputSpent: 404 => false (unspent; index may lag); else !!body.txid.
- *  - broadcast strips a SINGLE leading and a SINGLE trailing double-quote only.
+ *  - broadcast derives the txid locally from rawHex; a quoted provider txid is
+ *    checked and provider drift is warned about, never trusted as state.
  *  - waitForMempool checks rawTx FIRST then deadline (tries at least once);
  *    waitForConfirmation order: confirmation -> unknown/dropped -> deadline.
  */
@@ -148,10 +149,11 @@ int woc_client_pick_funding(woc_client_t *c, const char *address,
                             const rank_opts_t *opts,
                             funding_utxo_t *out, bool *out_found);
 
-/* POST /tx/raw with JSON {"txhex": rawHex}; on success writes the txid with a
- * single leading and single trailing double-quote stripped to *out_txid (freshly
- * malloc'd, caller frees). TS: broadcast. BNS_OK / BNS_ENET (incl. tagged 429) /
- * BNS_EPARSE / BNS_ENOMEM. */
+/* POST /tx/raw with JSON {"txhex": rawHex}; on HTTP success writes the locally
+ * computed display txid to *out_txid (freshly malloc'd, caller frees). A quoted
+ * provider response is checked against it; an invalid/mismatched body emits a
+ * warning but can never corrupt persisted state. BNS_OK / BNS_EINVAL / BNS_ENET
+ * (incl. tagged 429) / BNS_EPARSE / BNS_ENOMEM. */
 int woc_client_broadcast(woc_client_t *c, const char *raw_hex, char **out_txid);
 
 /* Poll rawTx every interval_ms (default 8000) until non-null, else fail after
